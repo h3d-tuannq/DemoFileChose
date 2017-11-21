@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:View xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark" title="HomeView" xmlns:mx="library://ns.adobe.com/flex/mx">
+	
+	<fx:Script>
+		<![CDATA[
+			import com.myflashlab.air.extensions.fileChooser.FileChooser;
+			import com.myflashlab.air.extensions.fileChooser.FileChooserEvent;
+			import com.myflashlab.air.extensions.nativePermissions.PermissionCheck;
+			
+			public var _ex:FileChooser = new FileChooser();
+			
+			public var _exPermissions:PermissionCheck = new PermissionCheck();
+			
+			public var typeFile:String = "*/*";
+			
+			protected function uploadBtn_clickHandler(event:MouseEvent):void
+			{
+				switch(event.target)
+				{
+					case uploadAllFileBtn:
+					{
+						typeFile = "*/*";
+						break;
+					}
+						
+					case uploadImageFileBtn:
+					{
+						typeFile = "image/*";
+						break;
+					}
+						
+					case uploadTextFileBtn:
+					{
+						typeFile = "text/*";
+						break;
+					}
+						
+					case uploadVideoFileBtn:
+					{
+						typeFile = "video/*";
+						break;
+					}
+					
+						
+					default:
+					{
+						typeFile = "*/*";
+						break;
+					}
+				}
+				checkPermisson();
+			}
+			
+			
+			public function onResult(e:FileChooserEvent):void
+			{
+				var file:File = e.param.original as File;
+				
+				var file2:File = new File(file.nativePath);
+				var fs:FileStream = new FileStream();
+				
+				var byteArray:ByteArray = new ByteArray();
+				fs.open(file, FileMode.READ);
+				fs.readBytes(byteArray,0,0);
+				
+				// run video
+				var nc:NetConnection = new NetConnection();
+				nc.connect(null);
+				
+				var ns:NetStream = new NetStream(nc);
+				
+				var client:Object = new Object();
+				client.onMetaData = function(metadata:Object):void {
+					trace(metadata.duration);
+				}
+				ns.client = client;
+				
+				var v:Video = new Video();
+				v.attachNetStream(ns);
+				wrapper.addChild(v);
+				
+			//	var f:File = new File("/tmp/test.flv");
+				
+				// end runvideo
+				
+
+				if(file.type != ".JPG" && file.type !=".jpg"){
+					ns.play(file.url);
+				} else {
+					imageSelect.source = byteArray;
+				}
+				
+				trace("file.name = " + file.name);
+				trace("file.extension = " + file.extension);
+				trace("------------------------------");
+			}
+			
+			public function onError(e:FileChooserEvent):void
+			{
+				trace("onError = " + e.param);
+			}	
+			
+			public function checkPermisson():void{
+				var permissionState:int = _exPermissions.check(PermissionCheck.SOURCE_STORAGE);
+				
+				if (permissionState == PermissionCheck.PERMISSION_UNKNOWN || permissionState == PermissionCheck.PERMISSION_DENIED)
+				{
+					_exPermissions.request(PermissionCheck.SOURCE_STORAGE, onRequestResult);
+				}
+				else
+				{
+					init();
+				}
+				
+				function onRequestResult($state:int):void
+				{
+					if ($state != PermissionCheck.PERMISSION_GRANTED)
+					{
+						trace("You did not allow the app the required permissions!");
+					}
+					else
+					{
+						init();
+					}
+				}
+			}
+			
+			public function init():void{
+				trace("init success");
+				_ex = new FileChooser();
+				_ex.addEventListener(FileChooserEvent.RESULT,onResult);
+				_ex.addEventListener(FileChooserEvent.ERROR,onError);
+				trace("start choser file");
+				trace(_ex.os)
+				trace("FileChooser Version: "+ FileChooser.VERSION);
+				
+				if(typeFile == "image/*")
+					_ex.choose(typeFile, "pick an image!",{width:200, height:200, quality:50});
+				else 
+					_ex.choose(typeFile, "pick an image! ");
+				// select image
+				//_ex.choose("image/*", "pick an image!");
+				// select video
+				//_ex.choose("video/*", "pick a video!");
+				// select text
+				//_ex.choose("text/*", "pick a text file!");
+				trace("finish chooser file");
+			}
+		]]>
+	</fx:Script>
+	<s:VGroup width="100%" height="100%" gap="10">
+		<s:HGroup width="100%">
+			<s:Button id="uploadAllFileBtn" width="50%"  label="Select File" click="uploadBtn_clickHandler(event)"/>
+			<s:Button id="uploadImageFileBtn" width="50%"  label="Select Image" click="uploadBtn_clickHandler(event)"/>
+		</s:HGroup>
+		<s:HGroup width="100%">
+			<s:Button id="uploadTextFileBtn" width="50%"  label="Select Document" click="uploadBtn_clickHandler(event)"/>
+			<s:Button id="uploadVideoFileBtn" width="50%"  label="Select Video" click="uploadBtn_clickHandler(event)"/>	
+		</s:HGroup>
+		<s:HGroup width="100%" height="50%">
+			<s:BitmapImage id="imageSelect" width="100%" height="100%" />
+			<mx:UIComponent id="wrapper" width="100%" height="100%"/>
+		</s:HGroup>
+		
+	</s:VGroup>
+</s:View>
